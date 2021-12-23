@@ -69,7 +69,7 @@ class Cube(object):
       new_z1 = max(self.z1, other.z1)
       new_z2 = min(self.z2, other.z2)
     if new_x1 is not None and new_y1 is not None and new_z1 is not None:
-      return Cube(new_x1, new_x2, new_y1, new_y2, new_z1, new_z2, self.turn_on)
+      return Cube(new_x1, new_x2, new_y1, new_y2, new_z1, new_z2, other.turn_on)
     return None
 
   def Area(self):
@@ -98,33 +98,32 @@ for line in lines:
 
 # print('\n'.join([str(c) for c in cubes]))
 
+def HigherOrderIntersections(intersection, intersections, i, j):
+  count = 0
+  for k in range(i+1, j):
+    extra = intersections[i].Intersect(intersections[k])
+    if extra is not None:
+      count += (extra.Area() -
+                HigherOrderIntersections(extra, intersections, i, k))
+  return count
+
 # cubes.reverse()
 count = 0
 for i in range(len(cubes)):
   if cubes[i].turn_on:
     count += cubes[i].Area()
   intersections = list()
-  for j in range(i-1, -1, -1):
+  for j in range(i):
     intersection = cubes[i].Intersect(cubes[j])
     if intersection is not None:
       print((i, j, intersection))
-      new_intersections = list()
-      new_intersections.append((int(cubes[i].turn_on), intersection))
-      new_intersection_index = 0
-      while new_intersection_index != len(new_intersections):
-        for other in intersections:
-          intersection_count, this = new_intersections[new_intersection_index]
-          extra = this.Intersect(other)
-          if extra is not None:
-            new_intersections.append((intersection_count + 1, extra))
-        new_intersection_index += 1
-        
-      if cubes[i].turn_on and cubes[j].turn_on:
-        # Avoid double counting.
+      if cubes[j].turn_on:
         count -= intersection.Area()
-      elif not cubes[i].turn_on and cubes[j].turn_on:
-        # Turn off the cubes.
-        count -= intersection.Area()
-      intersections.append((int(cubes[i].turn_on), intersection))
+      intersections.append(intersection)
+  # Handle higher order issues.
+  for i in range(len(intersections)-1):
+    count += HigherOrderIntersections(
+        intersections[i], intersections, i, len(intersections))
+
 print(count)
 

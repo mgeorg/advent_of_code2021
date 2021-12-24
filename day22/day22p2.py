@@ -7,7 +7,7 @@ import numpy as np
 import queue
 import re
 
-with open('example1.txt', 'r') as f:
+with open('example4.txt', 'r') as f:
   lines = f.read().splitlines()
 
 board = dict()
@@ -18,6 +18,16 @@ for x in range(-50, 51):
     for z in range(-50, 51):
       board[x][y][z] = False
 
+def CountBoard(board):
+  total = 0
+  for x in range(-50, 51):
+    for y in range(-50, 51):
+      for z in range(-50, 51):
+        total += board[x][y][z]
+  return total
+
+ground_truth = list()
+count = 0
 for line in lines:
   m = re.match(r'^(on|off) x=(-?\d+)\.\.(-?\d+),y=(-?\d+)\.\.(-?\d+),'
                r'z=(-?\d+)\.\.(-?\d+)$', line)
@@ -31,22 +41,20 @@ for line in lines:
   z2 = int(m.group(7))
   if x2 < -50 or x1 > 50 or y2 < -50 or y1 > 50 or z2 < -50 or z1 > 50:
     continue
-  print((turn_on, x1, x2, y1, y2, z1, z2))
+  # print((turn_on, x1, x2, y1, y2, z1, z2))
   for x in range(x1, x2+1):
     for y in range(y1, y2+1):
       for z in range(z1, z2+1):
         board[x][y][z] = turn_on
+  last = count
+  count = CountBoard(board)
+  ground_truth.append((count, count-last))
+  # print((count, count-last))
 
-total = 0
-for x in range(-50, 51):
-  for y in range(-50, 51):
-    for z in range(-50, 51):
-      total += board[x][y][z]
-
-print(total)
+print(CountBoard(board))
 
 class Cube(object):
-  def __init__(self, x1, x2, y1, y2, z1, z2, turn_on):
+  def __init__(self, x1, x2, y1, y2, z1, z2, turn_on, name=None):
     self.x1 = x1
     self.x2 = x2
     self.y1 = y1
@@ -54,6 +62,7 @@ class Cube(object):
     self.z1 = z1
     self.z2 = z2
     self.turn_on = turn_on
+    self.name = name
 
   def Intersect(self, other):
     new_x1 = None
@@ -69,15 +78,19 @@ class Cube(object):
       new_z1 = max(self.z1, other.z1)
       new_z2 = min(self.z2, other.z2)
     if new_x1 is not None and new_y1 is not None and new_z1 is not None:
-      return Cube(new_x1, new_x2, new_y1, new_y2, new_z1, new_z2, other.turn_on)
+      new_name = None
+      if self.name and other.name:
+        new_name = ''.join(sorted(set([x for x in self.name+other.name])))
+      return Cube(new_x1, new_x2, new_y1, new_y2, new_z1, new_z2,
+                  other.turn_on, new_name)
     return None
 
   def Area(self):
-    return (self.x2-self.x1+1)*(self.y2-self.y1+1)*(self.y2-self.y1+1)
+    return (self.x2-self.x1+1)*(self.y2-self.y1+1)*(self.z2-self.z1+1)
 
   def __repr__(self):
     return 'Cube' + repr((self.x1, self.x2, self.y1, self.y2,
-                          self.z1, self.z2, self.turn_on))
+                          self.z1, self.z2, self.turn_on, self.name))
 
 cubes = list()
 for line in lines:
@@ -98,32 +111,53 @@ for line in lines:
 
 # print('\n'.join([str(c) for c in cubes]))
 
-def HigherOrderIntersections(intersection, intersections, i, j):
+def HigherOrderIntersections(intersection, intersections, sign, i, j):
+  global added_string
   count = 0
-  for k in range(i+1, j):
-    extra = intersections[i].Intersect(intersections[k])
+  for k in range(i, j):
+    extra = intersection.Intersect(intersections[k])
     if extra is not None:
-      count += (extra.Area() -
-                HigherOrderIntersections(extra, intersections, i, k))
+      print('  ' + repr((i, k, j, extra, extra.Area())))
+      if sign == 1:
+        added_string.append('+' + extra.name)
+      else:
+        added_string.append('-' + extra.name)
+      count += sign*(extra.Area() +
+                HigherOrderIntersections(extra, intersections, -sign, i, k))
+  print(f'  Higher({intersection}, ..., {sign}, {i}, {j}) = {count}')
   return count
+
+for i in range(len(cubes)):
+  cubes[i].name = chr(ord('A') + i)
 
 # cubes.reverse()
 count = 0
 for i in range(len(cubes)):
+  added_string = list()
+  last = count
   if cubes[i].turn_on:
     count += cubes[i].Area()
+    added_string.append('+' + cubes[i].name)
   intersections = list()
   for j in range(i):
     intersection = cubes[i].Intersect(cubes[j])
     if intersection is not None:
-      print((i, j, intersection))
+      print((i, j, intersection, intersection.Area()))
       if cubes[j].turn_on:
+        added_string.append('-' + intersection.name)
         count -= intersection.Area()
       intersections.append(intersection)
   # Handle higher order issues.
-  for i in range(len(intersections)-1):
+  for k in range(len(intersections)-1):
     count += HigherOrderIntersections(
-        intersections[i], intersections, i, len(intersections))
+        intersections[k], intersections, 1, k+1, len(intersections))
+  prefix = ''
+  if count != ground_truth[i][0]:
+    prefix = 'MISTAKE!!! '
+  print(prefix + repr((i, count, ground_truth[i][0],
+                       count-last, ground_truth[i][1],
+                       ground_truth[i][1]-count+last)))
+  print(' '.join(added_string))
 
 print(count)
 

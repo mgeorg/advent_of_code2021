@@ -7,7 +7,7 @@ import numpy as np
 import queue
 import re
 
-with open('example1.txt', 'r') as f:
+with open('input.txt', 'r') as f:
   lines = f.read().splitlines()
 
 board = dict()
@@ -105,66 +105,67 @@ for line in lines:
   z1 = int(m.group(6))
   z2 = int(m.group(7))
   if (x2 < -50 or x1 > 50 or y2 < -50 or y1 > 50 or z2 < -50 or z1 > 50):
-    continue
+    pass
   # print((turn_on, x1, x2, y1, y2, z1, z2))
   cubes.append(Cube(x1, x2, y1, y2, z1, z2, turn_on))
 
 # print('\n'.join([str(c) for c in cubes]))
 
 def HigherOrderIntersections(intersection, intersections, sign, i, j):
-  global added_string
+  # global added_string
   if i == j:
     return 0
-  print(f'  Higher({intersection.name}, ..., {sign}, {i}, {j})')
+  # print(f'  Higher({intersection.name}, ..., {sign}, {i}, {j})')
   count = 0
   if sign == 1:
     for k in range(i, j):
       extra = intersection.Intersect(intersections[k])
       if extra is not None:
-        print('  ' + repr((i, k, j, '+' + extra.name, extra.Area())))
-        added_string.append('+' + extra.name)
+        # print('  ' + repr((i, k, j, '+' + extra.name, extra.Area())))
+        # added_string.append('+' + extra.name)
         count += (sign * extra.Area() +
             HigherOrderIntersections(extra, intersections, -sign, i, k))
   else:
     for k in range(j-1, i-1, -1):
       extra = intersection.Intersect(intersections[k])
       if extra is not None:
-        print('  ' + repr((i, k, j, '-' + extra.name, extra.Area())))
-        added_string.append('-' + extra.name)
+        # print('  ' + repr((i, k, j, '-' + extra.name, extra.Area())))
+        # added_string.append('-' + extra.name)
         count += (sign * extra.Area() +
             HigherOrderIntersections(extra, intersections, -sign, k+1, j))
-  print(f'  ENDED Higher({intersection.name}, ..., {sign}, {i}, {j}) = {count}')
+  # print(f'  ENDED Higher({intersection.name}, ..., {sign}, {i}, {j}) = {count}')
   return count
 
-for i in range(len(cubes)):
-  cubes[i].name = chr(ord('A') + i)
+# for i in range(len(cubes)):
+  # cubes[i].name = chr(ord('A') + i)
 
 # cubes.reverse()
 count = 0
 for j in range(len(cubes)):
-  added_string = list()
+  # added_string = list()
   last = count
   if cubes[j].turn_on:
     count += cubes[j].Area()
-    added_string.append('+' + cubes[j].name)
+    # added_string.append('+' + cubes[j].name)
   intersections = collections.deque()
   for i in range(j-1, -1, -1):
     intersection = cubes[i].Intersect(cubes[j])
     if intersection is not None:
       print((i, j, intersection, intersection.Area()))
       if cubes[i].turn_on:
-        added_string.append('-' + intersection.name)
+        # added_string.append('-' + intersection.name)
         count -= intersection.Area()
         count += HigherOrderIntersections(
             intersection, intersections, 1, 0, len(intersections))
       intersections.appendleft(intersection)
-  print(' '.join(added_string))
-  prefix = ''
-  if count != ground_truth[j][0]:
-    prefix = 'MISTAKE!!! '
-  print(prefix + repr((j, count, ground_truth[j][0],
-                       count-last, ground_truth[j][1],
-                       ground_truth[j][1]-count+last)))
+  # print(' '.join(added_string))
+  # prefix = ''
+  # if count != ground_truth[j][0]:
+    # prefix = 'MISTAKE!!! '
+  # print(prefix + repr((j, count, ground_truth[j][0],
+                       # count-last, ground_truth[j][1],
+                       # ground_truth[j][1]-count+last)))
+  print(repr((j, count, count-last)))
 
 print(count)
 
